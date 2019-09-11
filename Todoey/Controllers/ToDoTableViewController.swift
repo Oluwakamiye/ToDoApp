@@ -13,27 +13,17 @@ class ToDoTableViewController: UITableViewController {
     var itemList = [Item]()
     let defaults = UserDefaults.standard
     
+    let dataFilePath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?.appendingPathComponent("Items.plist")
+    
     override func viewDidLoad() {
         super.viewDidLoad()
-
-        let item1 = Item()
-        item1.itemName = "Nicki Minaj"
-        item1.isDone = true
-        itemList.append(item1)
+        print(dataFilePath)
         
-        let item2 = Item()
-        item2.itemName = "Khalid"
-        item2.isDone = false
-        itemList.append(item2)
+        loadItems()
         
-        let item3 = Item()
-        item3.itemName = "Jason Derulo"
-        item3.isDone = false
-        itemList.append(item3)
-        
-        if let items = defaults.array(forKey: "ItemList") as? [Item]{
-            itemList = items
-        }
+//        if let items = defaults.array(forKey: "ItemList") as? [Item]{
+//            itemList = items
+//        }
         // Uncomment the following line to preserve selection between presentations
         // self.clearsSelectionOnViewWillAppear = false
 
@@ -60,22 +50,19 @@ class ToDoTableViewController: UITableViewController {
         let cell = tableView.dequeueReusableCell(withIdentifier: "ToDoItem", for: indexPath)
         let item = itemList[indexPath.row]
         cell.textLabel?.text = item.itemName
-        
         cell.accessoryType = item.isDone ? .checkmark : .none
-        
-        // Configure the cell...
         return cell
     }
 
+    //What happens when you select a row
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-        let cell = tableView.cellForRow(at: indexPath)
         let item = itemList[indexPath.row]
         item.isDone = !item.isDone
-        
-        cell?.accessoryType = item.isDone ? .checkmark : .none
+        saveItems()
         tableView.deselectRow(at: indexPath, animated: true)
     }
     
+    //What happens when you click on the add Button on NavBar
     @IBAction func AddButtonTapped(_ sender: UIBarButtonItem) {
         var textField = UITextField()
         let alert = UIAlertController(title: "Add New Todoey Item", message: "", preferredStyle: .alert)
@@ -84,7 +71,9 @@ class ToDoTableViewController: UITableViewController {
             let item = Item()
             item.itemName = textField.text!
             self.itemList.append(item)
-            self.defaults.set(self.itemList , forKey: "ItemList")
+        
+            self.saveItems()
+            
             self.tableView.reloadData()
         }
         alert.addTextField { (alertTextField) in
@@ -94,6 +83,31 @@ class ToDoTableViewController: UITableViewController {
         
         alert.addAction(action)
         present(alert, animated: true, completion: nil)
+    }
+    
+    func saveItems(){
+        let encoder = PropertyListEncoder()
+        
+        do{
+            let data = try encoder.encode(itemList)
+            try data.write(to: dataFilePath!)
+            tableView.reloadData()
+        } catch{
+            print("Error encoding item array, \(error)")
+        }
+    }
+    
+    func loadItems(){
+        if let data = try? Data(contentsOf: dataFilePath!){
+            let decoder = PropertyListDecoder()
+            
+            do{
+                itemList = try decoder.decode([Item].self, from: data)
+            }catch{
+                print("Error decoding item array")
+            }
+        }
+        
     }
     
     /*
