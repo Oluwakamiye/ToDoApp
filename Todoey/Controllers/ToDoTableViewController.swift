@@ -7,30 +7,29 @@
 //
 
 import UIKit
+import CoreData
 
 class ToDoTableViewController: UITableViewController {
 
     var itemList = [Item]()
-    let defaults = UserDefaults.standard
+    let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
+    
+    var setCategory : Category?{
+        didSet{
+//            let request : NSFetchRequest<Item> = Item.fetchRequest()
+//            let predicate = NSPredicate(format: "parentCategory.name CONTAINS[cd] %@", self.setCategory!.name!)
+//            let sortDescriptor = NSSortDescriptor(key: "itemName", ascending: true)
+//            request.predicate = predicate
+//            request.sortDescriptors = [sortDescriptor]
+            loadItems()
+        }
+    }
     
     let dataFilePath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?.appendingPathComponent("Items.plist")
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        print(dataFilePath)
-        
-        loadItems()
-        
-//        if let items = defaults.array(forKey: "ItemList") as? [Item]{
-//            itemList = items
-//        }
-        // Uncomment the following line to preserve selection between presentations
-        // self.clearsSelectionOnViewWillAppear = false
-
-        // Uncomment the following line to display an Edit button in the navigation bar for this view controller.
-        // self.navigationItem.rightBarButtonItem = self.editButtonItem
-        
-        
+        print(FileManager.default.urls(for: .documentDirectory, in: .userDomainMask))
     }
 
     // MARK: - Table view data source
@@ -56,6 +55,9 @@ class ToDoTableViewController: UITableViewController {
 
     //What happens when you select a row
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        //context.delete(itemList[index.row])
+        //itemList.remove(at: index.row)
+        
         let item = itemList[indexPath.row]
         item.isDone = !item.isDone
         saveItems()
@@ -68,14 +70,18 @@ class ToDoTableViewController: UITableViewController {
         let alert = UIAlertController(title: "Add New Todoey Item", message: "", preferredStyle: .alert)
         
         let action = UIAlertAction(title: "Add Item", style: .default) { (action) in
-            let item = Item()
+            
+            let item = Item(context: self.context)
             item.itemName = textField.text!
+            item.isDone = false
+            item.parentCategory = self.setCategory
             self.itemList.append(item)
         
             self.saveItems()
             
             self.tableView.reloadData()
         }
+        
         alert.addTextField { (alertTextField) in
             alertTextField.placeholder = "Create New Item"
             textField = alertTextField
@@ -86,29 +92,37 @@ class ToDoTableViewController: UITableViewController {
     }
     
     func saveItems(){
-        let encoder = PropertyListEncoder()
-        
         do{
-            let data = try encoder.encode(itemList)
-            try data.write(to: dataFilePath!)
-            tableView.reloadData()
+            try context.save()
         } catch{
-            print("Error encoding item array, \(error)")
+            print("Error saving context \(error)")
         }
+        
+        self.tableView.reloadData()
     }
     
-    func loadItems(){
-        if let data = try? Data(contentsOf: dataFilePath!){
-            let decoder = PropertyListDecoder()
-            
-            do{
-                itemList = try decoder.decode([Item].self, from: data)
-            }catch{
-                print("Error decoding item array")
-            }
+    func loadItems(with request: NSFetchRequest<Item> = Item.fetchRequest(), predicate: NSPredicate? = nil){
+        let categoryPredicate = NSPredicate(format: "parentCategory.name CONTAINS[cd] %@", self.setCategory!.name!)
+        
+        if let additionalPredicate = predicate{
+            let compoundPredicate = NSCompoundPredicate(andPredicateWithSubpredicates: [categoryPredicate, additionalPredicate])
+            request.predicate = compoundPredicate
+        }
+        else{
+            request.predicate = categoryPredicate
         }
         
+        
+        do {
+            itemList = try context.fetch(request)
+        }
+        catch{
+            print("Error fetching request from database. Error is \(error)")
+        }
+        tableView.reloadData()
     }
+    
+    
     
     /*
     // Override to support conditional editing of the table view.
@@ -155,4 +169,29 @@ class ToDoTableViewController: UITableViewController {
     }
     */
 
+}
+
+
+//MARK: - Search Bar Methods
+extension ToDoTableViewController: UISearchBarDelegate{
+    
+    func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
+        let request : NSFetchRequest<Item> = Item.fetchRequest()
+        let predicate = NSPredicate(format: "itemName CONTAINS[cd] %@", searchBar.text!)
+        request.predicate = predicate
+        let sortDescriptor = NSSortDescriptor(key: "itemName", ascending: true)
+        request.sortDescriptors = [sortDescriptor]
+        loadItems(with: request)
+    }
+    
+    func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
+        if searchBar.text?.count == 0{
+            loadItems()
+            
+            DispatchQueue.main.async {
+                searchBar.resignFirstResponder()
+            }
+        }
+    }
+    
 }
