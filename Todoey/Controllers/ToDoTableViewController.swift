@@ -7,60 +7,64 @@
 //
 
 import UIKit
-import CoreData
+import RealmSwift
 
 class ToDoTableViewController: UITableViewController {
 
-    var itemList = [Item]()
-    let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
+    var toDoItems:Results<Item>?
+    let realm = try! Realm()
     
     var setCategory : Category?{
         didSet{
-//            let request : NSFetchRequest<Item> = Item.fetchRequest()
-//            let predicate = NSPredicate(format: "parentCategory.name CONTAINS[cd] %@", self.setCategory!.name!)
-//            let sortDescriptor = NSSortDescriptor(key: "itemName", ascending: true)
-//            request.predicate = predicate
-//            request.sortDescriptors = [sortDescriptor]
             loadItems()
         }
     }
     
-    let dataFilePath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?.appendingPathComponent("Items.plist")
-    
     override func viewDidLoad() {
         super.viewDidLoad()
-        print(FileManager.default.urls(for: .documentDirectory, in: .userDomainMask))
     }
 
     // MARK: - Table view data source
 
     override func numberOfSections(in tableView: UITableView) -> Int {
-        // #warning Incomplete implementation, return the number of sections
         return 1
     }
 
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        // #warning Incomplete implementation, return the number of rows
-        return itemList.count
+        return toDoItems?.count ?? 1
     }
 
-    //Adding the item to the tableView
+    //Displaying items on the tableview
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "ToDoItem", for: indexPath)
-        let item = itemList[indexPath.row]
-        cell.textLabel?.text = item.itemName
-        cell.accessoryType = item.isDone ? .checkmark : .none
+        if let item = toDoItems?[indexPath.row]{
+            cell.textLabel?.text = item.itemName
+            cell.accessoryType = item.isDone ? .checkmark : .none
+        }
+        else{
+            cell.textLabel?.text = "No Items Added Yet"
+        }
         return cell
     }
 
     //What happens when you select a row
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-        //context.delete(itemList[index.row])
-        //itemList.remove(at: index.row)
+        if let selectedItem = toDoItems?[indexPath.row]{
+            do{
+                try realm.write {
+                    selectedItem.isDone = !selectedItem.isDone
+                    tableView.reloadData()
+                }
+            }
+            catch{
+                print("Error updating item")
+            }
+        }
+//        if let item = toDoItems?[indexPath.row]{
+//            item.isDone = !item.isDone
+//            saveItems()
+//        }
         
-        let item = itemList[indexPath.row]
-        item.isDone = !item.isDone
-        saveItems()
         tableView.deselectRow(at: indexPath, animated: true)
     }
     
@@ -68,32 +72,41 @@ class ToDoTableViewController: UITableViewController {
     @IBAction func AddButtonTapped(_ sender: UIBarButtonItem) {
         var textField = UITextField()
         let alert = UIAlertController(title: "Add New Todoey Item", message: "", preferredStyle: .alert)
-        
+
         let action = UIAlertAction(title: "Add Item", style: .default) { (action) in
-            
-            let item = Item(context: self.context)
-            item.itemName = textField.text!
-            item.isDone = false
-            item.parentCategory = self.setCategory
-            self.itemList.append(item)
-        
-            self.saveItems()
-            
+            print("Add Button clicked")
+            if let currentCategory = self.setCategory{
+                do{
+                    try self.realm.write{
+                        let newItem = Item()
+                        newItem.itemName = textField.text!
+                        newItem.dateCreated = Date()
+                        currentCategory.items.append(newItem)
+                    }
+                }
+                catch{
+                    print("Error saving item")
+                }
+            }
             self.tableView.reloadData()
         }
-        
+
         alert.addTextField { (alertTextField) in
             alertTextField.placeholder = "Create New Item"
             textField = alertTextField
         }
-        
+
         alert.addAction(action)
         present(alert, animated: true, completion: nil)
     }
     
-    func saveItems(){
+    func saveItems(item: Item){
+        print("Save Items Called")
         do{
-            try context.save()
+            try realm.write {
+                print("Inside Try")
+                realm.add(item)
+            }
         } catch{
             print("Error saving context \(error)")
         }
@@ -101,74 +114,10 @@ class ToDoTableViewController: UITableViewController {
         self.tableView.reloadData()
     }
     
-    func loadItems(with request: NSFetchRequest<Item> = Item.fetchRequest(), predicate: NSPredicate? = nil){
-        let categoryPredicate = NSPredicate(format: "parentCategory.name CONTAINS[cd] %@", self.setCategory!.name!)
-        
-        if let additionalPredicate = predicate{
-            let compoundPredicate = NSCompoundPredicate(andPredicateWithSubpredicates: [categoryPredicate, additionalPredicate])
-            request.predicate = compoundPredicate
-        }
-        else{
-            request.predicate = categoryPredicate
-        }
-        
-        
-        do {
-            itemList = try context.fetch(request)
-        }
-        catch{
-            print("Error fetching request from database. Error is \(error)")
-        }
-        tableView.reloadData()
-    }
-    
-    
-    
-    /*
-    // Override to support conditional editing of the table view.
-    override func tableView(_ tableView: UITableView, canEditRowAt indexPath: IndexPath) -> Bool {
-        // Return false if you do not want the specified item to be editable.
-        return true
-    }
-    */
-
-    /*
-    // Override to support editing the table view.
-    override func tableView(_ tableView: UITableView, commit editingStyle: UITableViewCell.EditingStyle, forRowAt indexPath: IndexPath) {
-        if editingStyle == .delete {
-            // Delete the row from the data source
-            tableView.deleteRows(at: [indexPath], with: .fade)
-        } else if editingStyle == .insert {
-            // Create a new instance of the appropriate class, insert it into the array, and add a new row to the table view
-        }    
-    }
-    */
-
-    /*
-    // Override to support rearranging the table view.
-    override func tableView(_ tableView: UITableView, moveRowAt fromIndexPath: IndexPath, to: IndexPath) {
-
-    }
-    */
-
-    /*
-    // Override to support conditional rearranging of the table view.
-    override func tableView(_ tableView: UITableView, canMoveRowAt indexPath: IndexPath) -> Bool {
-        // Return false if you do not want the item to be re-orderable.
-        return true
-    }
-    */
-
-    /*
-    // MARK: - Navigation
-
-    // In a storyboard-based application, you will often want to do a little preparation before navigation
-    override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
-        // Get the new view controller using segue.destination.
-        // Pass the selected object to the new view controller.
-    }
-    */
-
+    func loadItems(){
+        toDoItems = setCategory?.items.sorted(byKeyPath: "itemName", ascending: true)
+//        tableView.reloadData()
+   }
 }
 
 
@@ -176,21 +125,23 @@ class ToDoTableViewController: UITableViewController {
 extension ToDoTableViewController: UISearchBarDelegate{
     
     func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
-        let request : NSFetchRequest<Item> = Item.fetchRequest()
         let predicate = NSPredicate(format: "itemName CONTAINS[cd] %@", searchBar.text!)
-        request.predicate = predicate
-        let sortDescriptor = NSSortDescriptor(key: "itemName", ascending: true)
-        request.sortDescriptors = [sortDescriptor]
-        loadItems(with: request)
+        toDoItems = toDoItems?.filter(predicate).sorted(byKeyPath: "dateCreated", ascending: true)
+        tableView.reloadData()
     }
     
     func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
         if searchBar.text?.count == 0{
             loadItems()
-            
+            tableView.reloadData()
             DispatchQueue.main.async {
                 searchBar.resignFirstResponder()
             }
+        } else{
+            let predicate = NSPredicate(format: "itemName CONTAINS[cd] %@", searchBar.text!)
+            loadItems()
+            toDoItems = toDoItems?.filter(predicate).sorted(byKeyPath: "itemName", ascending: true)
+            tableView.reloadData()
         }
     }
     

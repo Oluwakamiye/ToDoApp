@@ -1,31 +1,25 @@
-//
-//  CategoryViewController.swift
-//  Todoey
-//
-//  Created by Oluwakamiye Akindele on 25/09/2019.
-//  Copyright © 2019 Oluwakamiye Akindele. All rights reserved.
-//
-
 import UIKit
-import CoreData
+import RealmSwift
 
 class CategoryViewController: UITableViewController {
 
-    let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
-    var categoryList = [Category]()
+    let realm = try! Realm()
+    
+    var categoryList:Results<Category>?
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        self.loadItems()
+        self.loadCategories()
     }
 
+    //TODO: - Display categories as text
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "CategoryCell", for: indexPath)
-        cell.textLabel?.text = categoryList[indexPath.row].name
+        cell.textLabel?.text = categoryList?[indexPath.row].categoryName ?? "No categories added yet"
         return cell
     }
     
-    
+    //TODO: - Add Category Button
     @IBAction func addCategory(_ sender: UIBarButtonItem) {
         let alert = UIAlertController(title: "Add new Category", message: "Add new cat", preferredStyle: .alert)
         var textField = UITextField()
@@ -33,12 +27,12 @@ class CategoryViewController: UITableViewController {
         let catAction = UIAlertAction(title: "Add Category", style: .default){
             (action) in
             
-            let text = textField.text
-            let category = Category(context: self.context)
-            category.name = text
-            
-            self.categoryList.append(category)
-            self.saveCategories()
+            if let text = textField.text{
+                let category = Category()
+                category.categoryName = text
+                
+                self.save(category: category)
+            }
         }
         
         alert.addTextField
@@ -58,7 +52,7 @@ class CategoryViewController: UITableViewController {
     }
     
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return categoryList.count
+        return categoryList?.count ?? 1
     }
     
     
@@ -73,32 +67,28 @@ class CategoryViewController: UITableViewController {
         let destinationVC = segue.destination as! ToDoTableViewController
         
         if let indexPath = tableView.indexPathForSelectedRow{
-            destinationVC.setCategory = categoryList[indexPath.row]
+            destinationVC.setCategory = categoryList?[indexPath.row]
         }
     }
     
     //MARK: - Data Manipulation Methods
     
     //TODO: - Add Load function
-    func loadItems(withCategory request:NSFetchRequest<Category> = Category.fetchRequest()){
-        do{
-            try categoryList = context.fetch(request)
-        }
-        catch{
-            print("Error loading data. Error is \(error)")
-        }
-        tableView.reloadData()
+    func loadCategories(){
+        categoryList = realm.objects(Category.self)
     }
     
     //TODO: - Add Save function
-    func saveCategories(){
+    func save(category: Category){
         do {
-            try context.save()
-            tableView.reloadData()
+            try realm.write {
+                realm.add(category)
+            }
         }
         catch{
             print("Error saving. Error is \(error)")
         }
+        tableView.reloadData()
     }
     
 }
