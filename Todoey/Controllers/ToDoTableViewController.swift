@@ -1,15 +1,7 @@
-//
-//  ToDoTableViewController.swift
-//  Todoey
-//
-//  Created by Oluwakamiye Akindele on 09/09/2019.
-//  Copyright © 2019 Oluwakamiye Akindele. All rights reserved.
-//
-
 import UIKit
 import RealmSwift
 
-class ToDoTableViewController: UITableViewController {
+class ToDoTableViewController: SwipeTableViewController {
 
     var toDoItems:Results<Item>?
     let realm = try! Realm()
@@ -36,7 +28,7 @@ class ToDoTableViewController: UITableViewController {
 
     //Displaying items on the tableview
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier: "ToDoItem", for: indexPath)
+        let cell = super.tableView(tableView, cellForRowAt: indexPath)
         if let item = toDoItems?[indexPath.row]{
             cell.textLabel?.text = item.itemName
             cell.accessoryType = item.isDone ? .checkmark : .none
@@ -59,12 +51,7 @@ class ToDoTableViewController: UITableViewController {
             catch{
                 print("Error updating item")
             }
-        }
-//        if let item = toDoItems?[indexPath.row]{
-//            item.isDone = !item.isDone
-//            saveItems()
-//        }
-        
+        }        
         tableView.deselectRow(at: indexPath, animated: true)
     }
     
@@ -116,8 +103,22 @@ class ToDoTableViewController: UITableViewController {
     
     func loadItems(){
         toDoItems = setCategory?.items.sorted(byKeyPath: "itemName", ascending: true)
-//        tableView.reloadData()
    }
+    
+    override func updateModel(at indexPath: IndexPath) {
+        super.updateModel(at: indexPath)
+        
+        if let selectedItem = toDoItems?[indexPath.row]{
+            do{
+                try realm.write {
+                    realm.delete(selectedItem)
+                }
+            }
+            catch{
+                print("Error occured while trying to delete item")
+            }
+        }
+    }
 }
 
 
