@@ -22,6 +22,7 @@ override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexP
     if let category = categoryList?[indexPath.row]{
         cell.textLabel?.text = category.categoryName
         cell.backgroundColor = UIColor(hexString: category.cellColor)
+        cell.textLabel?.textColor = UIColor(contrastingBlackOrWhiteColorOn: cell.backgroundColor, isFlat: true)
     } else{
         cell.textLabel?.text = "No categories added yet"
     }
