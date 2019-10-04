@@ -1,5 +1,6 @@
 import UIKit
 import RealmSwift
+import ChameleonFramework
 
 class ToDoTableViewController: SwipeTableViewController {
 
@@ -14,10 +15,10 @@ class ToDoTableViewController: SwipeTableViewController {
     
     override func viewDidLoad() {
         super.viewDidLoad()
+        tableView.separatorStyle = .none
     }
 
     // MARK: - Table view data source
-
     override func numberOfSections(in tableView: UITableView) -> Int {
         return 1
     }
@@ -32,10 +33,14 @@ class ToDoTableViewController: SwipeTableViewController {
         if let item = toDoItems?[indexPath.row]{
             cell.textLabel?.text = item.itemName
             cell.accessoryType = item.isDone ? .checkmark : .none
+            cell.backgroundColor = doGradientColor(color: UIColor.flatSkyBlue(), index: indexPath.row)
+            //UIColor(contrastingBlackOrWhiteColorOn: cell.backgroundColor, isFlat: true)
+            cell.textLabel?.textColor = UIColor(contrastingBlackOrWhiteColorOn: cell.backgroundColor, isFlat: true)
         }
         else{
             cell.textLabel?.text = "No Items Added Yet"
         }
+        
         return cell
     }
 
@@ -68,6 +73,7 @@ class ToDoTableViewController: SwipeTableViewController {
                         let newItem = Item()
                         newItem.itemName = textField.text!
                         newItem.dateCreated = Date()
+                        //newItem.cellColor = self.doGradientColor(color: UIColor.flatSkyBlue())//UIColor.randomFlat()!.hexValue()
                         currentCategory.items.append(newItem)
                     }
                 }
@@ -102,7 +108,7 @@ class ToDoTableViewController: SwipeTableViewController {
     }
     
     func loadItems(){
-        toDoItems = setCategory?.items.sorted(byKeyPath: "itemName", ascending: true)
+        toDoItems = setCategory?.items.sorted(byKeyPath: "dateCreated", ascending: true)
    }
     
     override func updateModel(at indexPath: IndexPath) {
@@ -118,6 +124,12 @@ class ToDoTableViewController: SwipeTableViewController {
                 print("Error occured while trying to delete item")
             }
         }
+    }
+    
+    func doGradientColor(color: UIColor, index: Int) -> UIColor{
+        let gradValue: CGFloat = CGFloat(CGFloat(index)/CGFloat(toDoItems!.count))
+        print("Gradient Value is \(gradValue)")
+        return color.darken(byPercentage: gradValue)!
     }
 }
 
