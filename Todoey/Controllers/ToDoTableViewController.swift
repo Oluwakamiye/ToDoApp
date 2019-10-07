@@ -40,7 +40,6 @@ class ToDoTableViewController: SwipeTableViewController {
         else{
             cell.textLabel?.text = "No Items Added Yet"
         }
-        
         return cell
     }
 
@@ -56,7 +55,7 @@ class ToDoTableViewController: SwipeTableViewController {
             catch{
                 print("Error updating item")
             }
-        }        
+        }
         tableView.deselectRow(at: indexPath, animated: true)
     }
     
@@ -64,26 +63,35 @@ class ToDoTableViewController: SwipeTableViewController {
     @IBAction func AddButtonTapped(_ sender: UIBarButtonItem) {
         var textField = UITextField()
         let alert = UIAlertController(title: "Add New Todoey Item", message: "", preferredStyle: .alert)
-
         let action = UIAlertAction(title: "Add Item", style: .default) { (action) in
             print("Add Button clicked")
-            if let currentCategory = self.setCategory{
-                do{
-                    try self.realm.write{
-                        let newItem = Item()
-                        newItem.itemName = textField.text!
-                        newItem.dateCreated = Date()
-                        //newItem.cellColor = self.doGradientColor(color: UIColor.flatSkyBlue())//UIColor.randomFlat()!.hexValue()
-                        currentCategory.items.append(newItem)
+            
+                if let text = textField.text{
+                    if text != "" && text.trimmingCharacters(in: NSCharacterSet.whitespacesAndNewlines) != ""{
+                        if let currentCategory = self.setCategory{
+                            do{
+                                try self.realm.write{
+                                    let newItem = Item()
+                                    newItem.itemName = text
+                                    newItem.dateCreated = Date()
+                                    //newItem.cellColor = self.doGradientColor(color: UIColor.flatSkyBlue())//UIColor.randomFlat()!.hexValue()
+                                    currentCategory.items.append(newItem)
+                                    self.tableView.reloadData()
+                                }
+                            }
+                            catch{
+                                print("Error saving item")
+                            }
+                        }
+                    }
+                    else{
+                        let warning = UIAlertController(title: "Error!", message: "Cannot add an empty title", preferredStyle: .alert)
+                        let warningAction = UIAlertAction(title: "Got it!", style: .cancel, handler: nil)
+                        warning.addAction(warningAction)
+                        self.present(warning, animated: true, completion: nil)
                     }
                 }
-                catch{
-                    print("Error saving item")
-                }
             }
-            self.tableView.reloadData()
-        }
-
         alert.addTextField { (alertTextField) in
             alertTextField.placeholder = "Create New Item"
             textField = alertTextField
@@ -109,7 +117,7 @@ class ToDoTableViewController: SwipeTableViewController {
     
     func loadItems(){
         toDoItems = setCategory?.items.sorted(byKeyPath: "dateCreated", ascending: true)
-   }
+    }
     
     override func updateModel(at indexPath: IndexPath) {
         super.updateModel(at: indexPath)

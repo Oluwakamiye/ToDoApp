@@ -16,9 +16,10 @@ override func viewDidLoad() {
     
 }
 
-
 override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
     let cell = super.tableView(tableView, cellForRowAt: indexPath)
+    print("IndexPath for categoryList is \(indexPath.row)")
+    
     if let category = categoryList?[indexPath.row]{
         cell.textLabel?.text = category.categoryName
         cell.backgroundColor = UIColor(hexString: category.cellColor)
@@ -35,14 +36,22 @@ override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexP
     let alert = UIAlertController(title: "Add new Category", message: "Add new cat", preferredStyle: .alert)
     var textField = UITextField()
     
-    let catAction = UIAlertAction(title: "Add Category", style: .default){
+    let addCategoryAction = UIAlertAction(title: "Add Category", style: .default){
         (action) in
         
         if let text = textField.text{
-            let category = Category()
-            category.categoryName = text
-            category.cellColor = UIColor.randomFlat()!.hexValue()
-            self.save(category: category)
+            if text != "" && text.trimmingCharacters(in: NSCharacterSet.whitespacesAndNewlines) != "" {
+                let category = Category()
+                category.categoryName = text
+                category.cellColor = UIColor.randomFlat()!.hexValue()
+                self.save(category: category)
+            }
+            else{
+                let warning = UIAlertController(title: "Error!", message: "Please add a category Name", preferredStyle: .alert)
+                let warningAction = UIAlertAction(title: "Got it!", style: .cancel, handler: nil)
+                warning.addAction(warningAction)
+                self.present(warning, animated: true, completion: nil)
+            }
         }
     }
     
@@ -54,7 +63,7 @@ override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexP
     }
     
     let cancelAction = UIAlertAction(title: "Cancel", style: .cancel, handler: nil)
-    alert.addAction(catAction)
+    alert.addAction(addCategoryAction)
     alert.addAction(cancelAction)
     present(alert, animated: true, completion: nil)
 }
