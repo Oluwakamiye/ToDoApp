@@ -13,9 +13,21 @@ class ToDoTableViewController: SwipeTableViewController {
         }
     }
     
+    @IBOutlet weak var searchBar: UISearchBar!
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         tableView.separatorStyle = .none
+    }
+    
+    override func viewDidAppear(_ animated: Bool) {
+        if let colorHex = setCategory?.cellColor{
+            title = "\(setCategory!.categoryName)-items"
+            guard let navBar = navigationController?.navigationBar else {fatalError("Navigation Controller does not exist.")}
+            navBar.barTintColor = UIColor(hexString: colorHex)
+            navBar.tintColor = UIColor(contrastingBlackOrWhiteColorOn: navBar.barTintColor, isFlat: true)
+            searchBar.barTintColor = UIColor(hexString: colorHex)
+        }
     }
 
     // MARK: - Table view data source
@@ -33,7 +45,8 @@ class ToDoTableViewController: SwipeTableViewController {
         if let item = toDoItems?[indexPath.row]{
             cell.textLabel?.text = item.itemName
             cell.accessoryType = item.isDone ? .checkmark : .none
-            cell.backgroundColor = doGradientColor(color: UIColor.flatSkyBlue(), index: indexPath.row)
+            //cell.backgroundColor = doGradientColor(color: UIColor.flatSkyBlue(), index: indexPath.row)
+            cell.backgroundColor = doGradientColor(color: UIColor(hexString: setCategory?.cellColor), index: indexPath.row)
             //UIColor(contrastingBlackOrWhiteColorOn: cell.backgroundColor, isFlat: true)
             cell.textLabel?.textColor = UIColor(contrastingBlackOrWhiteColorOn: cell.backgroundColor, isFlat: true)
         }
